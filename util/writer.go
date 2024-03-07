@@ -11,6 +11,10 @@ import (
 var ImgHeader = []byte{0x20, 0x49, 0x50, 0x41}
 
 // WriteFile does what it says: write the image file out to disk
+// hash is the crc32 that will be used for the filename
+// src is the full path to the image being processed
+// outDir is the directory to write the file to; it will be created if it doesn't exist
+// boxArt controls the scaling algorithm
 func WriteFile(hash, src string, outDir string, boxArt bool) error {
 	imgFile, err := os.Open(src)
 	if err != nil {
@@ -18,9 +22,9 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 	}
 	defer imgFile.Close()
 
-	img, err := imaging.Open(src) // Weirdly `resize` doesn't work correctly if you use `Decode` instead of `Open`
+	img, err := imaging.Open(src)
 	if err != nil {
-		return fmt.Errorf("imgconv.Open: %w", err)
+		return fmt.Errorf("imaging.Open: %w", err)
 	}
 
 	rotated := imaging.Rotate90(img) // image.NRGBA
@@ -58,6 +62,7 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 		return fmt.Errorf("header: %w", err)
 	}
 
+	// Specification requires the height then the width to be written out as little endian bytes
 	err = binary.Write(outFile, binary.LittleEndian, (int16)(height))
 	if err != nil {
 		return fmt.Errorf("dim 1: %w", err)

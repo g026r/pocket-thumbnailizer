@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// MakeDir is just a simple helper function to create directories
 func MakeDir(path string) error {
 	el := strings.Split(path, "/")
 	p := ""

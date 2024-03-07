@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"log/slog"
 	"os"
@@ -17,7 +16,6 @@ import (
 const isBoxArt = true
 
 func main() {
-
 	if len(os.Args) != 4 {
 		printUsage()
 	}
@@ -25,8 +23,14 @@ func main() {
 	inDir := os.Args[2]
 	outDir := os.Args[3]
 
+	// Make certain the input dir exists
+	if d, err := os.Stat(inDir); err != nil || !d.IsDir() {
+		log.Fatalf("Error parsing input dir %s", inDir)
+	}
+
+	// Load the datafile from disk & unmarshal it
 	var datafile model.Datafile
-	b, err := ioutil.ReadFile(dataFile)
+	b, err := os.ReadFile(dataFile)
 	if err != nil {
 		log.Fatalf("read datafile: %v", err)
 	}
@@ -35,8 +39,17 @@ func main() {
 		log.Fatalf("unmarshal: %v", err)
 	}
 
-	util.MakeDir(outDir)
+	// Create the output dir if it doesn't exist
+	err = util.MakeDir(outDir)
+	if err != nil {
+		log.Fatalf("Unable to create output dir %s", outDir)
+	}
 
+	slog.Info("Processing entries. This may take a while.")
+
+	// For each game in the datafile:
+	// 1. Determine if it's a png or a jpg (libretro-thumbnails is all pngs, but this is for my future use)
+	// 2.
 	processed := 0
 	for _, g := range datafile.Games {
 		img := fmt.Sprintf("%s/%s.png", inDir, strings.Replace(g.Name, "&", "_", -1))
@@ -47,14 +60,14 @@ func main() {
 				continue
 			}
 		}
-		processed++
 		err = util.WriteFile(g.ROM.CRC32, img, outDir, isBoxArt)
 		if err != nil {
 			log.Fatalf("util.WriteFile: %v", err)
 		}
+		processed++
 	}
 
-	log.Printf("Processed %d game entries", processed)
+	slog.Info(fmt.Sprintf("Processed %d game entries out of %d total", processed, len(datafile.Games)))
 }
 
 func printUsage() {

@@ -2,6 +2,7 @@ package model
 
 import "encoding/xml"
 
+// Datafile represents the datomatic XML format stripped down to just the parts we need
 type Datafile struct {
 	XMLName xml.Name `xml:"datafile"`
 	Games   []Game   `xml:"game"`
