@@ -1,4 +1,4 @@
-## pocket-thumbnailizer: a simple go utility to generate Analogue Pocket library thumbnails
+## pocket-thumbnailizer: a utility to generate Analogue Pocket library thumbnails
 
 Simple golang utility hacked together so that I could generate Analogue Pocket library thumbnails without having to launch a Windows virtual environment every time.
 
@@ -13,4 +13,6 @@ Currently it's hardcoded for box art as that's what I use. Change the value of `
 ### Usage
 `go run cmd/main.go /path/to/datomatic.dat /path/to/libretro-thumbails/files /path/to/output/dir`
 
-The input directory should be the actual directory with the images contained in it, not the root of the libretro-thumbails copy. (i.e. point to Named_Boxarts, Named_Snaps, Named_Titles)
+The input directory should be the actual directory with the images contained in it, not the root of the libretro-thumbails copy. (i.e. point to one of Named_Boxarts, Named_Snaps, Named_Titles)
+
+It's currently a bit chatty & will print out every entry in the dat file that it can't find an image for. It will not, however, print out when it finds an image but no datafile entry.
