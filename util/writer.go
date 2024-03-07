@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/disintegration/imaging"
@@ -30,6 +31,7 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 
 	img, err := imaging.Open(src)
 	if err != nil {
+		slog.Debug(src)
 		return fmt.Errorf("imaging.Open: %w", err)
 	}
 
