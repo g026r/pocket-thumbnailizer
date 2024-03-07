@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	// slog.SetLogLoggerLevel(slog.LevelDebug) // Turn this on if images are failing to load
+	slog.SetLogLoggerLevel(slog.LevelDebug) // Turn this on if images are failing to load
 
 	if len(os.Args) != 4 {
 		printUsage()
@@ -32,9 +32,9 @@ func main() {
 	isBoxArt := false
 	if strings.HasSuffix(strings.ToLower(inDir), "named_boxarts") ||
 		strings.HasSuffix(strings.ToLower(inDir), "named_boxarts/") {
-		slog.Debug("box art determination", "isBoxArt", isBoxArt)
 		isBoxArt = true
 	}
+	slog.Debug("box art determination", "isBoxArt", isBoxArt)
 
 	// Load the datafile from disk & unmarshal it
 	var datafile model.Datafile
