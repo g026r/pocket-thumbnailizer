@@ -8,7 +8,13 @@ import (
 	"github.com/disintegration/imaging"
 )
 
-var ImgHeader = []byte{0x20, 0x49, 0x50, 0x41}
+// maxImgSize is the maximum height of the image on the game details screen.
+// Much larger than this & it starts getting cropped.
+const maxImgSize = 175
+
+// imgHeader = " IPA"
+// What does it mean? Why does it exist? I dunno.
+var imgHeader = []byte{0x20, 0x49, 0x50, 0x41}
 
 // WriteFile does what it says: write the image file out to disk
 // hash is the crc32 that will be used for the filename
@@ -27,18 +33,21 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 		return fmt.Errorf("imaging.Open: %w", err)
 	}
 
-	rotated := imaging.Rotate90(img) // image.NRGBA
+	// rotate 90 degrees.
+	// Necessary for the Pocket for some reason, though I've been told the Duo doesn't need it.
+	// I'll worry about that if ever I get a Duo, I guess.
+	rotated := imaging.Rotate90(img) // return type: image.NRGBA
 
 	if boxArt {
-		// We scale here. Not sure on the algo though.
-		rotated = imaging.Resize(rotated, 175, 0, imaging.Lanczos)
-	} else if rotated.Rect.Max.X > 175 { // Only resize non box art if the image is too big.
-		rotated = imaging.Resize(rotated, 175, 0, imaging.Lanczos)
+		// We scale here. Should I use a different scaling algo?
+		rotated = imaging.Resize(rotated, maxImgSize, 0, imaging.Lanczos)
+	} else if rotated.Rect.Max.X > maxImgSize { // Only resize non box art if the image is too big.
+		rotated = imaging.Resize(rotated, maxImgSize, 0, imaging.Lanczos)
 	}
 	width := rotated.Rect.Max.X
 	height := rotated.Rect.Max.Y
 
-	// Hooray! We get to convert from RGBA to BGRA format.
+	// Why use BGRA, Analogue? Why?
 	bgra := make([]byte, len(rotated.Pix))
 	for i := 0; i < len(rotated.Pix); i = i + 4 {
 		bgra[i] = rotated.Pix[i+2]
@@ -57,7 +66,7 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 	defer outFile.Close()
 
 	// Now we write the header.
-	_, err = outFile.Write(ImgHeader)
+	_, err = outFile.Write(imgHeader)
 	if err != nil {
 		return fmt.Errorf("header: %w", err)
 	}
