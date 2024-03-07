@@ -52,7 +52,7 @@ func main() {
 	// 2.
 	processed := 0
 	for _, g := range datafile.Games {
-		img := fmt.Sprintf("%s/%s.png", inDir, strings.Replace(g.Name, "&", "_", -1))
+		img := fmt.Sprintf("%s/%s.png", inDir, strings.Replace(g.Name, "&", "_", -1)) // libretro uses `_` instead of `&` in file names
 		if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
 			img = fmt.Sprintf("%s/%s.jpg", inDir, g.Name)
 			if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
