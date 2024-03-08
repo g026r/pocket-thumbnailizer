@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/xml"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
-	"log/slog"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/g026r/pocket-thumbnailizer/model"
@@ -14,73 +16,74 @@ import (
 )
 
 func main() {
-	// slog.SetLogLoggerLevel(slog.LevelDebug) // Turn this on if you want to know which files it's skipping
-
-	if len(os.Args) != 4 {
-		printUsage()
-	}
-	dataFile := os.Args[1]
-	inDir := os.Args[2]
-	outDir := os.Args[3]
-
-	// Make certain the input dir exists
-	if d, err := os.Stat(inDir); err != nil || !d.IsDir() {
-		log.Fatalf("Error parsing input dir %s", inDir)
+	var args util.Args
+	var err error
+	if args, err = util.ParseArgs(); errors.Is(err, util.ErrInvalidArguments) {
+		flag.Usage()
+		os.Exit(2)
+	} else if err != nil {
+		log.Fatalf("parse args error: %v", err)
 	}
 
-	// Not pleased with this way to programatically do this. Should come up with something better
-	isBoxArt := false
-	if strings.HasSuffix(strings.ToLower(inDir), "named_boxarts") ||
-		strings.HasSuffix(strings.ToLower(inDir), "named_boxarts/") {
-		isBoxArt = true
-	}
-	slog.Debug("box art determination", "isBoxArt", isBoxArt)
-
-	// Load the datafile from disk & unmarshal it
 	var datafile model.Datafile
-	b, err := os.ReadFile(dataFile)
-	if err != nil {
-		log.Fatalf("read datafile: %v", err)
-	}
-	err = xml.Unmarshal(b, &datafile)
-	if err != nil {
-		log.Fatalf("unmarshal: %v", err)
+	if len(args.Datafile) != 0 {
+		// Load the datafile from disk & unmarshal it
+		b, err := os.ReadFile(args.Datafile)
+		if err != nil {
+			log.Fatalf("read datafile: %v", err)
+		}
+		err = xml.Unmarshal(b, &datafile)
+		if err != nil {
+			log.Fatalf("unmarshal: %v", err)
+		}
+	} else { // No datafile means we're in single-file mode
+		name := args.ImagePath
+		if ext, _ := regexp.MatchString(`\.[[:alnum:]]$`, args.ImagePath); ext {
+			name = name[:strings.LastIndex(name, ".")]
+		}
+		if sep := strings.LastIndex(name, strconv.QuoteRune(os.PathSeparator)); sep != -1 {
+			name = name[sep:]
+			args.ImagePath = args.ImagePath[:sep] // Remove the image from this so we can use a generic processing block
+		}
+		datafile = model.Datafile{
+			Games: []model.Game{{
+				Name: name,
+				ROM: model.Rom{
+					CRC32: args.CRC,
+				},
+			}},
+		}
 	}
 
 	// Create the output dir if it doesn't exist
-	err = util.MakeDir(outDir)
+	err = util.MakeDir(args.OutPath)
 	if err != nil {
-		log.Fatalf("Unable to create output dir %s", outDir)
+		log.Fatalf("Unable to create output dir %s", args.OutPath)
 	}
 
-	slog.Info(fmt.Sprintf("Found %d entries & beginning processing. This may take a while...", len(datafile.Games)))
+	fmt.Println(fmt.Sprintf("Found %d entries & beginning processing. This may take a while...", len(datafile.Games)))
 
 	// For each game in the datafile:
 	// 1. Determine if it's a png or a jpg (libretro-thumbnails is all pngs, but this is for my future use)
-	// 2.
 	processed := 0
 	for _, g := range datafile.Games {
 		// libretro uses `_` instead of `&` in file names
-		img := fmt.Sprintf("%s/%s.png", inDir, strings.Replace(g.Name, "&", "_", -1))
+		img := fmt.Sprintf("%s/%s.png", args.ImagePath, strings.Replace(g.Name, "&", "_", -1))
 		if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
-			img = fmt.Sprintf("%s/%s.jpg", inDir, g.Name)
+			img = fmt.Sprintf("%s/%s.jpg", args.ImagePath, g.Name)
 			if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
-				slog.Debug("File does not exist. Skipping.", "game", g.Name)
+				if args.Verbose {
+					fmt.Println(fmt.Sprintf("File for %s does not exist. Skipping.", g.Name))
+				}
 				continue
 			}
 		}
-		err = util.WriteFile(g.ROM.CRC32, img, outDir, isBoxArt)
+		err = util.WriteFile(g.ROM.CRC32, img, args.OutPath, args.Upscale)
 		if err != nil {
 			log.Fatalf("util.WriteFile: %v", err)
 		}
 		processed++
 	}
 
-	slog.Info(fmt.Sprintf("Successfully processed %d game entries", processed))
-}
-
-func printUsage() {
-	parts := strings.Split(os.Args[0], "/")
-	fmt.Printf("Usage: %s <datafile> <img dir> <output dir>\n", parts[len(parts)-1])
-	os.Exit(2)
+	fmt.Println(fmt.Sprintf("Successfully processed %d game entries", processed))
 }

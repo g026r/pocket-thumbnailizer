@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"image/png"
-	"log/slog"
 	"os"
 
 	"github.com/disintegration/imaging"
@@ -16,15 +15,15 @@ import (
 const maxImgSize = 175
 
 // imgHeader = " IPA"
-// What does it mean? Why does it exist? I dunno.
+// Why this? I dunno. But it's what's necessary.
 var imgHeader = []byte{0x20, 0x49, 0x50, 0x41}
 
 // WriteFile does what it says: write the image file out to disk
 // hash is the crc32 that will be used for the filename
 // src is the full path to the image being processed
 // outDir is the directory to write the file to; it will be created if it doesn't exist
-// boxArt controls the scaling algorithm
-func WriteFile(hash, src string, outDir string, boxArt bool) error {
+// upscale will cause it to stretch images less than maxImgSize in height to maxImgSize
+func WriteFile(hash, src string, outDir string, upscale bool) error {
 	imgFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("os.Open: %w", err)
@@ -34,11 +33,10 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 	img, err := imaging.Open(src)
 
 	if err != nil {
-		slog.Debug(src)
 		// A bunch of libretro-thumbnail images have invalid checksums & are simply un-openable via Go's strict image loader
 		// Let the user know so that it can be fixed.
 		if errors.Is(err, png.FormatError("invalid checksum")) {
-			slog.Error("Image has an invalid checksum. Try opening & re-saving in an image editor.", "image", src)
+			fmt.Printf("Image %s has an invalid checksum. Try opening & re-saving in an image editor.", src)
 		}
 		return fmt.Errorf("imaging.Open: %s: %w", src, err)
 	}
@@ -48,10 +46,10 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 	// I'll worry about that if ever I get a Duo, I guess.
 	rotated := imaging.Rotate90(img) // return type: image.NRGBA
 
-	if boxArt {
-		// We scale here. Should I use a different scaling algo?
+	if rotated.Rect.Max.X > maxImgSize { // Only resize non box art if the image is too big.
 		rotated = imaging.Resize(rotated, maxImgSize, 0, imaging.Lanczos)
-	} else if rotated.Rect.Max.X > maxImgSize { // Only resize non box art if the image is too big.
+	} else if upscale {
+		// We scale here. Should I use a different scaling algo?
 		rotated = imaging.Resize(rotated, maxImgSize, 0, imaging.Lanczos)
 	}
 	width := rotated.Rect.Max.X
@@ -66,7 +64,10 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 		bgra[i+3] = rotated.Pix[i+3]
 	}
 
-	MakeDir(outDir)
+	err = MakeDir(outDir) // This occurs here & not earlier why again? I forget.
+	if err != nil {
+		return fmt.Errorf("WriteFile MakeDir: %w", err)
+	}
 	outSrc := fmt.Sprintf("%s/%s.bin", outDir, hash)
 
 	outFile, err := os.Create(outSrc)
