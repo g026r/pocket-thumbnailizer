@@ -2,7 +2,9 @@ package util
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"image/png"
 	"log/slog"
 	"os"
 
@@ -30,8 +32,14 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 	defer imgFile.Close()
 
 	img, err := imaging.Open(src)
+
 	if err != nil {
 		slog.Debug(src)
+		// A bunch of libretro-thumbnail images have invalid checksums & are simply un-openable via Go's strict image loader
+		// Let the user know so that it can be fixed.
+		if errors.Is(err, png.FormatError("invalid checksum")) {
+			slog.Error("Image has an invalid checksum. Try opening & re-saving in an image editor.", "image", src)
+		}
 		return fmt.Errorf("imaging.Open: %w", err)
 	}
 
