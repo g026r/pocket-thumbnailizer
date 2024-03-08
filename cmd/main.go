@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug) // Turn this on if images are failing to load
+	// slog.SetLogLoggerLevel(slog.LevelDebug) // Turn this on if you want to know which files it's skipping
 
 	if len(os.Args) != 4 {
 		printUsage()
@@ -53,7 +53,7 @@ func main() {
 		log.Fatalf("Unable to create output dir %s", outDir)
 	}
 
-	slog.Info("Processing entries. This may take a while.")
+	slog.Info(fmt.Sprintf("Found %d entries & beginning processing. This may take a while...", len(datafile.Games)))
 
 	// For each game in the datafile:
 	// 1. Determine if it's a png or a jpg (libretro-thumbnails is all pngs, but this is for my future use)
@@ -65,7 +65,7 @@ func main() {
 		if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
 			img = fmt.Sprintf("%s/%s.jpg", inDir, g.Name)
 			if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
-				slog.Warn("File does not exist. Skipping.", "game", g.Name)
+				slog.Debug("File does not exist. Skipping.", "game", g.Name)
 				continue
 			}
 		}
@@ -76,7 +76,7 @@ func main() {
 		processed++
 	}
 
-	slog.Info(fmt.Sprintf("Processed %d game entries out of %d total", processed, len(datafile.Games)))
+	slog.Info(fmt.Sprintf("Successfully processed %d game entries", processed))
 }
 
 func printUsage() {
