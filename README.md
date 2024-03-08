@@ -8,7 +8,7 @@ Could be a bit more user friendly, but this was mostly hacked together for my ow
 
 It will resize box art up or down to 170px in height to best make use of the game details screen without cropping. Non box art will be scaled down to 170px if it's above that, but will be otherwise left untouched.
 
-Currently it's hardcoded for box art as that's what I use. Change the value of `isBoxArt` in cmd/main.go to `false` if you want to use it with something else.
+Currently it decides whether it's box art or not by checking to see if the directory it's loading images from is named `Named_BoxArts` as that's the naming convention libretro-thumbnails uses.
 
 ### Usage
 `go run cmd/main.go /path/to/datomatic.dat /path/to/libretro-thumbails/files /path/to/output/dir`
