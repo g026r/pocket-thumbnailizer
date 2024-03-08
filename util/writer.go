@@ -40,7 +40,7 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 		if errors.Is(err, png.FormatError("invalid checksum")) {
 			slog.Error("Image has an invalid checksum. Try opening & re-saving in an image editor.", "image", src)
 		}
-		return fmt.Errorf("imaging.Open: %w", err)
+		return fmt.Errorf("imaging.Open: %s: %w", src, err)
 	}
 
 	// rotate 90 degrees.
@@ -84,11 +84,11 @@ func WriteFile(hash, src string, outDir string, boxArt bool) error {
 	// Specification requires the height then the width to be written out as little endian bytes
 	err = binary.Write(outFile, binary.LittleEndian, (int16)(height))
 	if err != nil {
-		return fmt.Errorf("dim 1: %w", err)
+		return fmt.Errorf("height: %w", err)
 	}
 	err = binary.Write(outFile, binary.LittleEndian, (int16)(width))
 	if err != nil {
-		return fmt.Errorf("dim 2: %w", err)
+		return fmt.Errorf("width: %w", err)
 	}
 
 	// NB: I'm just ignoring stride & hoping it works. Fucking stride...
