@@ -11,7 +11,7 @@ import (
 
 var ErrInvalidArguments = errors.New("invalid arguments")
 
-// Args are all the possible commandline arguments
+// Args contains all the recognized commandline arguments
 type Args struct {
 	// Datafile is the dat-o-matic datafile for multi-game processing mode. Mutually exclusive with CRC.
 	Datafile string

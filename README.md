@@ -4,7 +4,17 @@ Simple commandline utility hacked together so that I could generate Analogue Poc
 
 It can work in multi-image or single image processing mode, allowing generation of an entire system's library or a single game. (i.e. if a game was missing from the library or it had the wrong art.)
 
-Currently it assumes you know how to build & run a go application. I'll try to get some binaries up eventually.
+Supports the following image formats:
+* JPG
+* GIF
+* PNG
+* WEBP
+* BMP
+* TIFF
+
+It currently assumes you know how to build & run a go application. I'll try to get some binaries up eventually.
+
+### Usage
 
 For multi-image mode, the following options are used:
 * `--datafile` A [no-intro datomatic](https://datomatic.no-intro.org) dat file.
