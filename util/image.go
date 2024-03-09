@@ -1,22 +1,15 @@
 package util
 
 import (
-	"bufio"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"image"
-	"image/gif"
-	"image/jpeg"
 	"image/png"
-	"io"
 	"os"
 	"strings"
 
 	"github.com/disintegration/imaging"
-	"golang.org/x/image/bmp"
-	"golang.org/x/image/tiff"
-	"golang.org/x/image/webp"
 
 	"github.com/g026r/pocket-thumbnailizer/model"
 )
@@ -66,6 +59,7 @@ func ProcessGames(args Args, games []model.Game) (int, error) {
 var extensions = []string{"png", "jpg", "webp", "gif", "jpeg", "bmp", "tif", "tiff"}
 
 // findFile checks for all the supported file extensions & returns the first one it finds
+// Used with the datomatic datafile mode, as we know the file name but not the extension
 func findFile(path, name string) (string, error) {
 	for _, ext := range extensions {
 		img := fmt.Sprintf("%s/%s.%s", path, name, ext)
@@ -155,22 +149,6 @@ func writeFile(hash, src string, outDir string, upscale bool) error {
 	return nil
 }
 
-// decoders is a lookup table of the magic numbers for the various file types supported
-var decoders = map[string]func(reader io.Reader) (image.Image, error){
-	string([]byte{0x42, 0x4D}):                                                           bmp.Decode,
-	string([]byte{0x47, 0x49, 0x46, 0x38, 0x37, 0x61}):                                   gif.Decode,
-	string([]byte{0x47, 0x49, 0x46, 0x38, 0x39, 0x61}):                                   gif.Decode,
-	string([]byte{0xFF, 0xD8, 0xFF, 0xEE}):                                               jpeg.Decode,
-	string([]byte{0xFF, 0xD8, 0xFF, 0xE1, '?', '?', 0x45, 0x78, 0x69, 0x66, 0x00, 0x00}): jpeg.Decode,
-	string([]byte{0xFF, 0xD8, 0xFF, 0xE0}):                                               jpeg.Decode,
-	string([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}):                       png.Decode,
-	string([]byte{0x49, 0x49, 0x2A, 0x00}):                                               tiff.Decode,
-	string([]byte{0x4D, 0x4D, 0x00, 0x2A}):                                               tiff.Decode,
-	string([]byte{0x52, 0x49, 0x46, 0x46, '?', '?', '?', '?', 0x57, 0x45, 0x42, 0x50}):   webp.Decode,
-}
-
-// getImg loads the image by use of magic numbers to determine the proper decoder.
-// Used rather than image.Decode as that doesn't handle bmp, tiff, or webp files.
 func getImg(src string) (img image.Image, err error) {
 	f, err := os.Open(src)
 	if err != nil {
@@ -178,27 +156,6 @@ func getImg(src string) (img image.Image, err error) {
 	}
 	defer f.Close()
 
-	r := bufio.NewReader(f)
-	for k, v := range decoders {
-		b, _ := r.Peek(len(k))
-		if match(k, b) {
-			return v(f)
-		}
-	}
-
-	return nil, imaging.ErrUnsupportedFormat
-}
-
-// match reports whether magic matches b. Magic may contain "?" wildcards.
-// Swiped from the core image package
-func match(magic string, b []byte) bool {
-	if len(magic) != len(b) {
-		return false
-	}
-	for i, c := range b {
-		if magic[i] != c && magic[i] != '?' {
-			return false
-		}
-	}
-	return true
+	i, _, err := image.Decode(f)
+	return i, err
 }
