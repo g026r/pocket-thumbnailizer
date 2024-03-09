@@ -133,7 +133,7 @@ Usage of thumbnailizer:
 -d, --datafile Path to no-intro dat-o-matic datafile for multi image processing mode
 -h, --help     Prints this message
 -i, --in       Path to image file (for crc mode) or image directory (for datafile mode)
--o, --out	   Output directory (defaults to current directory if unspecified)
+-o, --out      Output directory (defaults to current directory if unspecified)
 -u, --upscale  Resizes images less than 170 pixels high
 -v, --verbose  Turns on verbose logging`)
 }
