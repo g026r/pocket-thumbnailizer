@@ -1,18 +1,22 @@
 ## pocket-thumbnailizer: a utility to generate Analogue Pocket library thumbnails
 
-Simple golang utility hacked together so that I could generate Analogue Pocket library thumbnails without having to launch a Windows virtual environment every time.
+Simple commandline utility hacked together so that I could generate Analogue Pocket library thumbnails without having to launch a Windows virtual environment every time.
 
-Takes a [no-intro datomatic](https://datomatic.no-intro.org) dat file & a directory containing a set of [libretro-thumbnail](https://github.com/libretro-thumbnails) images, and from that generates a set of Analogue Pocket compliant bin files for use as library images.
+It can work in multi-image or single image processing mode, allowing generation of an entire system's library or a single game. (i.e. if a game was missing from the library or it had the wrong art.)
 
-Could be a bit more user friendly, but this was mostly hacked together for my own use.
+Currently it assumes you know how to build & run a go application. I'll try to get some binaries up eventually.
 
-It will resize box art up or down to 170px in height to best make use of the game details screen without cropping. Non box art will be scaled down to 170px if it's above that, but will be otherwise left untouched.
+For multi-image mode, the following options are used:
+* `--datafile` A [no-intro datomatic](https://datomatic.no-intro.org) dat file.
+* `--in` The directory where the images reside.
+* `--out` The output directory for the bin files.
 
-Currently it decides whether it's box art or not by checking to see if the directory it's loading images from is named `Named_BoxArts` as that's the naming convention libretro-thumbnails uses.
+For single image mode, the following options are used:
+* `--crc` The crc to use for the filename.
+* `--in` The image to process. Can handle jpg, png, and gif are supported.
+* `--out` The directory to output the file to.
 
-### Usage
-`go run cmd/main.go /path/to/datomatic.dat /path/to/libretro-thumbails/files /path/to/output/dir`
+You can also pass it `--upscale` or `--verbose` in both modes.
 
-The input directory should be the actual directory with the images contained in it, not the root of the libretro-thumbails copy. (i.e. point to one of Named_Boxarts, Named_Snaps, Named_Titles)
-
-It's currently a bit chatty & will print out every entry in the dat file that it can't find an image for. It will not, however, print out when it finds an image but no datafile entry.
+* `--upscale` will resize any image below 175 pixels in height up to 175 pixels. (Images will always be resized down to 175 pixels in height if they're larger to avoid cropping.)
+* `--verbose` prints out a few extra logging messages. If you're using the multi-file mode & not seeing the image you expect generating, you may wish to try this flag.
