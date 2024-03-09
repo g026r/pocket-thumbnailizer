@@ -3,10 +3,10 @@ package main
 import (
 	"encoding/xml"
 	"errors"
+	"flag"
 	"fmt"
-	"log"
-	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/g026r/pocket-thumbnailizer/model"
@@ -14,73 +14,62 @@ import (
 )
 
 func main() {
-	// slog.SetLogLoggerLevel(slog.LevelDebug) // Turn this on if you want to know which files it's skipping
-
-	if len(os.Args) != 4 {
-		printUsage()
-	}
-	dataFile := os.Args[1]
-	inDir := os.Args[2]
-	outDir := os.Args[3]
-
-	// Make certain the input dir exists
-	if d, err := os.Stat(inDir); err != nil || !d.IsDir() {
-		log.Fatalf("Error parsing input dir %s", inDir)
+	var args util.Args
+	var err error
+	if args, err = util.ParseArgs(); errors.Is(err, util.ErrInvalidArguments) {
+		flag.Usage()
+		os.Exit(2)
+	} else if err != nil {
+		fmt.Println("Unable to parse arguments:", err)
+		os.Exit(1)
 	}
 
-	// Not pleased with this way to programatically do this. Should come up with something better
-	isBoxArt := false
-	if strings.HasSuffix(strings.ToLower(inDir), "named_boxarts") ||
-		strings.HasSuffix(strings.ToLower(inDir), "named_boxarts/") {
-		isBoxArt = true
-	}
-	slog.Debug("box art determination", "isBoxArt", isBoxArt)
-
-	// Load the datafile from disk & unmarshal it
 	var datafile model.Datafile
-	b, err := os.ReadFile(dataFile)
-	if err != nil {
-		log.Fatalf("read datafile: %v", err)
-	}
-	err = xml.Unmarshal(b, &datafile)
-	if err != nil {
-		log.Fatalf("unmarshal: %v", err)
+	if len(args.Datafile) != 0 {
+		// Load the datafile from disk & unmarshal it
+		b, err := os.ReadFile(args.Datafile)
+		if err != nil {
+			fmt.Println("Unable to load datafile:", err)
+			os.Exit(1)
+		}
+		err = xml.Unmarshal(b, &datafile)
+		if err != nil {
+			fmt.Println("Unable to parse datafile:", err)
+			os.Exit(1)
+		}
+	} else { // No datafile means we're in single-file mode
+		name := args.ImagePath
+		if ext, _ := regexp.MatchString(`\.[[:alnum:]]+$`, args.ImagePath); ext {
+			name = name[:strings.LastIndex(name, ".")]
+		}
+		if sep := strings.LastIndex(name, string(os.PathSeparator)); sep != -1 {
+			name = name[sep+1:]
+		}
+		datafile = model.Datafile{
+			Games: []model.Game{{
+				Name: name,
+				ROM: model.Rom{
+					CRC32: args.CRC,
+				},
+			}},
+		}
 	}
 
 	// Create the output dir if it doesn't exist
-	err = util.MakeDir(outDir)
+	err = util.MakeDir(args.OutPath)
 	if err != nil {
-		log.Fatalf("Unable to create output dir %s", outDir)
+		fmt.Println("Unable to create output dir", args.OutPath)
+		os.Exit(1)
 	}
 
-	slog.Info(fmt.Sprintf("Found %d entries & beginning processing. This may take a while...", len(datafile.Games)))
+	fmt.Printf("Found %d entries & beginning processing. This may take a while...\n", len(datafile.Games))
 
-	// For each game in the datafile:
-	// 1. Determine if it's a png or a jpg (libretro-thumbnails is all pngs, but this is for my future use)
-	// 2.
-	processed := 0
-	for _, g := range datafile.Games {
-		// libretro uses `_` instead of `&` in file names
-		img := fmt.Sprintf("%s/%s.png", inDir, strings.Replace(g.Name, "&", "_", -1))
-		if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
-			img = fmt.Sprintf("%s/%s.jpg", inDir, g.Name)
-			if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
-				slog.Debug("File does not exist. Skipping.", "game", g.Name)
-				continue
-			}
-		}
-		err = util.WriteFile(g.ROM.CRC32, img, outDir, isBoxArt)
-		if err != nil {
-			log.Fatalf("util.WriteFile: %v", err)
-		}
-		processed++
+	processed, err := util.ProcessGames(args, datafile.Games)
+	if err != nil {
+		fmt.Println("Error processing games:", err)
+		os.Exit(1)
 	}
 
-	slog.Info(fmt.Sprintf("Successfully processed %d game entries", processed))
-}
-
-func printUsage() {
-	parts := strings.Split(os.Args[0], "/")
-	fmt.Printf("Usage: %s <datafile> <img dir> <output dir>\n", parts[len(parts)-1])
-	os.Exit(2)
+	fmt.Printf("Successfully processed %d game entries\n", processed)
+	os.Exit(0)
 }
