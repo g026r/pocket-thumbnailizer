@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"image/png"
 	"os"
+	"strings"
 
 	"github.com/disintegration/imaging"
+
+	"github.com/g026r/pocket-thumbnailizer/model"
 )
 
 // maxImgSize is the maximum height of the image on the game details screen.
@@ -18,25 +21,52 @@ const maxImgSize = 175
 // Why this? I dunno. But it's what's necessary.
 var imgHeader = []byte{0x20, 0x49, 0x50, 0x41}
 
+// ProcessGames takes a list of games & transforms any images it finds for them into Pocket-compatible bin files
+func ProcessGames(args Args, games []model.Game) (int, error) {
+	// For each game in the datafile:
+	// 1. Determine if it's a png or a jpg (libretro-thumbnails is all pngs, but this is for my future use)
+	processed := 0
+	for _, g := range games {
+		img := args.ImagePath
+		// If we're in multifile mode we need to build the file from the game name
+		if len(args.Datafile) != 0 {
+			//libretro uses '_' instead of '&' in file names
+			img = fmt.Sprintf("%s/%s.png", img, strings.Replace(g.Name, "&", "_", -1))
+
+			// Check if it's a PNG or a JPEG
+			if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
+				img = fmt.Sprintf("%s/%s.jpg", args.ImagePath, g.Name)
+				if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
+					if args.Verbose {
+						fmt.Printf("%s: image file does not exist. Skipping.\n", g.Name)
+					}
+					continue
+				}
+			}
+		}
+
+		err := writeFile(g.ROM.CRC32, img, args.OutPath, args.Upscale)
+		if err != nil {
+			return processed, fmt.Errorf("util.WriteFile error: %w", err)
+		}
+		processed++
+	}
+
+	return processed, nil
+}
+
 // WriteFile does what it says: write the image file out to disk
 // hash is the crc32 that will be used for the filename
 // src is the full path to the image being processed
 // outDir is the directory to write the file to; it will be created if it doesn't exist
 // upscale will cause it to stretch images less than maxImgSize in height to maxImgSize
-func WriteFile(hash, src string, outDir string, upscale bool) error {
-	imgFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("os.Open: %w", err)
-	}
-	defer imgFile.Close()
-
+func writeFile(hash, src string, outDir string, upscale bool) error {
 	img, err := imaging.Open(src)
-
 	if err != nil {
 		// A bunch of libretro-thumbnail images have invalid checksums & are simply un-openable via Go's strict image loader
 		// Let the user know so that it can be fixed.
 		if errors.Is(err, png.FormatError("invalid checksum")) {
-			fmt.Printf("Image %s has an invalid checksum. Try opening & re-saving in an image editor.", src)
+			fmt.Printf("Image %s has an invalid checksum. Try opening & re-saving it in an image editor.", src)
 		}
 		return fmt.Errorf("imaging.Open: %s: %w", src, err)
 	}

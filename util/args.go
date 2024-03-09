@@ -6,21 +6,33 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 )
 
 var ErrInvalidArguments = errors.New("invalid arguments")
 
 // Args are all the possible commandline arguments
 type Args struct {
-	Datafile  string // Mutually exclusive with CRC
-	CRC       string // Mutually exclusive with Datafile
-	ImagePath string // Could be a file. Could be a dir. We'll check in verifyArgs.
-	OutPath   string // It's a string rather than a File as we won't create it until after we have confirmed everything exists.
-	Upscale   bool
-	Verbose   bool
+	// Datafile is the dat-o-matic datafile for multi-game processing mode. Mutually exclusive with CRC.
+	Datafile string
+	// CRC is the crc to use when generating an image in single file mode. Mutually exclusive with Datafile.
+	CRC string
+	// ImagePath is a file if CRC is specified & a directory if Datafile is.
+	ImagePath string
+	// OutPath will be created during processing. Will default to the current working dir otherwise.
+	OutPath string
+	// Upscale specifies whether to resize images less than MaxImgSize pixels.
+	Upscale bool
+	// Verbose prints a few extra logging messages.
+	Verbose bool
+	// Duo specifies whether to output in Duo-format. Doesn't currently work
+	// TODO: What is different between Duo & Pocket images?
+	Duo bool
 }
 
 // ParseArgs parses the commandline args as well as verifies that the correct set of them is provided.
+// flag is admittedly a bit crap, as you technically can specify the same arg on the command line more than once &
+// there's nothing we can do to detect that
 func ParseArgs() (Args, error) {
 	args := Args{}
 	flag.Usage = printUsage
@@ -77,7 +89,7 @@ func verifyArgs(args Args) (Args, error) {
 		return args, ErrInvalidArguments
 	}
 
-	// Image source is the most complex: it can be a file or a directory
+	// Image source is the most complex: it can be a file or a directory depending on the mode we're in
 	if imgSrc, err := os.Stat(args.ImagePath); errors.Is(err, os.ErrNotExist) {
 		return Args{}, fmt.Errorf("input source %s does not exist", args.ImagePath)
 	} else if err != nil {
@@ -91,7 +103,9 @@ func verifyArgs(args Args) (Args, error) {
 	}
 
 	if len(args.CRC) != 0 {
-		if match, err := regexp.MatchString(`[[:xdigit:]]{8}`, args.CRC); !match {
+		// convert to lowercase for filename consistency & remove the `0x` prefix in case someone copied directly from a dat-o-matic file
+		args.CRC = strings.TrimPrefix(strings.ToLower(args.CRC), "0x")
+		if match, err := regexp.MatchString(`^[[:xdigit:]]{8}$`, args.CRC); !match {
 			return Args{}, fmt.Errorf("%s is not a valid crc32 hash", args.CRC)
 		} else if err != nil {
 			return Args{}, fmt.Errorf("regex error: %w", err)
@@ -107,17 +121,19 @@ func verifyArgs(args Args) (Args, error) {
 			return Args{}, fmt.Errorf("datafile %s is a directory", args.Datafile)
 		}
 	}
+
 	return args, nil
 }
 
+// printUsage exists to override the default flag function, which is ugly as sin
 func printUsage() {
 	fmt.Println(`
 Usage of thumbnailizer:
--d, --datafile Path to no-intro dat-o-matic datafile for multi image processing mode
 -c, --crc      CRC32 of game for single image processing mode
+-d, --datafile Path to no-intro dat-o-matic datafile for multi image processing mode
+-h, --help     Prints this message
 -i, --in       Path to image file (for crc mode) or image directory (for datafile mode)
--o, --out	   Output directory
--v, --verbose  Turns on verbose logging
+-o, --out	   Output directory (defaults to current directory if unspecified)
 -u, --upscale  Resizes images less than 170 pixels high
--h, --help     Prints this message`)
+-v, --verbose  Turns on verbose logging`)
 }

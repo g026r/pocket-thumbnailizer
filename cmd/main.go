@@ -5,10 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/g026r/pocket-thumbnailizer/model"
@@ -22,7 +20,8 @@ func main() {
 		flag.Usage()
 		os.Exit(2)
 	} else if err != nil {
-		log.Fatalf("parse args error: %v", err)
+		fmt.Println("Unable to parse arguments:", err)
+		os.Exit(1)
 	}
 
 	var datafile model.Datafile
@@ -30,20 +29,21 @@ func main() {
 		// Load the datafile from disk & unmarshal it
 		b, err := os.ReadFile(args.Datafile)
 		if err != nil {
-			log.Fatalf("read datafile: %v", err)
+			fmt.Println("Unable to load datafile:", err)
+			os.Exit(1)
 		}
 		err = xml.Unmarshal(b, &datafile)
 		if err != nil {
-			log.Fatalf("unmarshal: %v", err)
+			fmt.Println("Unable to parse datafile:", err)
+			os.Exit(1)
 		}
 	} else { // No datafile means we're in single-file mode
 		name := args.ImagePath
-		if ext, _ := regexp.MatchString(`\.[[:alnum:]]$`, args.ImagePath); ext {
+		if ext, _ := regexp.MatchString(`\.[[:alnum:]]+$`, args.ImagePath); ext {
 			name = name[:strings.LastIndex(name, ".")]
 		}
-		if sep := strings.LastIndex(name, strconv.QuoteRune(os.PathSeparator)); sep != -1 {
-			name = name[sep:]
-			args.ImagePath = args.ImagePath[:sep] // Remove the image from this so we can use a generic processing block
+		if sep := strings.LastIndex(name, string(os.PathSeparator)); sep != -1 {
+			name = name[sep+1:]
 		}
 		datafile = model.Datafile{
 			Games: []model.Game{{
@@ -58,32 +58,18 @@ func main() {
 	// Create the output dir if it doesn't exist
 	err = util.MakeDir(args.OutPath)
 	if err != nil {
-		log.Fatalf("Unable to create output dir %s", args.OutPath)
+		fmt.Println("Unable to create output dir", args.OutPath)
+		os.Exit(1)
 	}
 
-	fmt.Println(fmt.Sprintf("Found %d entries & beginning processing. This may take a while...", len(datafile.Games)))
+	fmt.Printf("Found %d entries & beginning processing. This may take a while...\n", len(datafile.Games))
 
-	// For each game in the datafile:
-	// 1. Determine if it's a png or a jpg (libretro-thumbnails is all pngs, but this is for my future use)
-	processed := 0
-	for _, g := range datafile.Games {
-		// libretro uses `_` instead of `&` in file names
-		img := fmt.Sprintf("%s/%s.png", args.ImagePath, strings.Replace(g.Name, "&", "_", -1))
-		if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
-			img = fmt.Sprintf("%s/%s.jpg", args.ImagePath, g.Name)
-			if _, err := os.Stat(img); errors.Is(err, os.ErrNotExist) {
-				if args.Verbose {
-					fmt.Println(fmt.Sprintf("File for %s does not exist. Skipping.", g.Name))
-				}
-				continue
-			}
-		}
-		err = util.WriteFile(g.ROM.CRC32, img, args.OutPath, args.Upscale)
-		if err != nil {
-			log.Fatalf("util.WriteFile: %v", err)
-		}
-		processed++
+	processed, err := util.ProcessGames(args, datafile.Games)
+	if err != nil {
+		fmt.Println("Error processing games:", err)
+		os.Exit(1)
 	}
 
-	fmt.Println(fmt.Sprintf("Successfully processed %d game entries", processed))
+	fmt.Printf("Successfully processed %d game entries\n", processed)
+	os.Exit(0)
 }
