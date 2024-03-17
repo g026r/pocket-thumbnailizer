@@ -70,6 +70,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Successfully processed %d game entries\n", processed)
+	fmt.Printf("Successfully processed %d images\n", processed)
 	os.Exit(0)
 }

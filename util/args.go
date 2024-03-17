@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -89,6 +90,17 @@ func verifyArgs(args Args) (Args, error) {
 		return args, ErrInvalidArguments
 	}
 
+	outpath, err := filepath.Abs(args.OutPath)
+	if err != nil {
+		return Args{}, fmt.Errorf("error finding absolute path: %w", err)
+	}
+	args.OutPath = outpath
+
+	imgPath, err := filepath.Abs(args.ImagePath)
+	if err != nil {
+		return Args{}, fmt.Errorf("error finding absolute path: %w", err)
+	}
+	args.ImagePath = imgPath
 	// Image source is the most complex: it can be a file or a directory depending on the mode we're in
 	if imgSrc, err := os.Stat(args.ImagePath); errors.Is(err, os.ErrNotExist) {
 		return Args{}, fmt.Errorf("input source %s does not exist", args.ImagePath)
@@ -112,6 +124,11 @@ func verifyArgs(args Args) (Args, error) {
 		}
 	}
 
+	datafile, err := filepath.Abs(args.Datafile)
+	if err != nil {
+		return Args{}, fmt.Errorf("error finding absolute path: %w", err)
+	}
+	args.Datafile = datafile
 	if len(args.Datafile) > 0 {
 		if datafile, err := os.Stat(args.Datafile); errors.Is(err, os.ErrNotExist) {
 			return Args{}, fmt.Errorf("datafile %s does not exist", args.Datafile)
