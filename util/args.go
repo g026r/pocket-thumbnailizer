@@ -124,12 +124,14 @@ func verifyArgs(args Args) (Args, error) {
 		}
 	}
 
-	datafile, err := filepath.Abs(args.Datafile)
-	if err != nil {
-		return Args{}, fmt.Errorf("error finding absolute path: %w", err)
-	}
-	args.Datafile = datafile
 	if len(args.Datafile) > 0 {
+		// Only do this after checking length as filepath.Abs("") gives you the working directory.
+		datafile, err := filepath.Abs(args.Datafile)
+		if err != nil {
+			return Args{}, fmt.Errorf("error finding absolute path: %w", err)
+		}
+		args.Datafile = datafile
+
 		if datafile, err := os.Stat(args.Datafile); errors.Is(err, os.ErrNotExist) {
 			return Args{}, fmt.Errorf("datafile %s does not exist", args.Datafile)
 		} else if err != nil {
