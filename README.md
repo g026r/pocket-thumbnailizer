@@ -12,8 +12,6 @@ Supports the following image formats:
 * BMP
 * TIFF
 
-It currently assumes you know how to build & run a go application. I'll try to get some binaries up eventually.
-
 ### Usage
 
 For multi-image mode, the following options are used:
