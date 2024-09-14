@@ -115,13 +115,11 @@ func verifyArgs(args Args) (Args, error) {
 	}
 
 	if len(args.CRC) != 0 {
-		// convert to lowercase for filename consistency & remove the `0x` prefix in case someone copied directly from a dat-o-matic file
-		args.CRC = strings.TrimPrefix(strings.ToLower(args.CRC), "0x")
-		if match, err := regexp.MatchString(`^[[:xdigit:]]{8}$`, args.CRC); !match {
-			return Args{}, fmt.Errorf("%s is not a valid crc32 hash", args.CRC)
-		} else if err != nil {
-			return Args{}, fmt.Errorf("regex error: %w", err)
+		crc, err := hexStringCleanAndVerify(args.CRC)
+		if err != nil {
+			return Args{}, fmt.Errorf("error parsing provided crc32: %w", err)
 		}
+		args.CRC = crc
 	}
 
 	if len(args.Datafile) > 0 {
@@ -155,4 +153,26 @@ Usage of thumbnailizer:
 -o, --out      Output directory (defaults to current directory if unspecified)
 -u, --upscale  Resizes images less than 170 pixels high
 -v, --verbose  Turns on verbose logging`)
+}
+
+// hexStringCleanAndVerify is a simple function to verify that what we have been provided as a crc 32 hash is a valid
+// crc, as well as formatting it to meet our requirements.
+func hexStringCleanAndVerify(s string) (string, error) {
+	// convert to lowercase for filename consistency & remove the `0x` prefix in case someone copied directly from a dat-o-matic file
+	s = strings.TrimPrefix(strings.ToLower(s), "0x")
+
+	// String should be exactly 32 bits. We can pad it out if too short, but can't handle too long.
+	if len(s) > 8 {
+		return "", errors.New("hex string too long")
+	} else if len(s) < 8 {
+		s = fmt.Sprintf("%08s", s) // Pad out to 8 characters
+	}
+
+	if match, err := regexp.MatchString(`^[[:xdigit:]]{8}$`, s); !match {
+		return "", fmt.Errorf("%s is not a valid crc32 hash", s)
+	} else if err != nil {
+		return s, fmt.Errorf("regex error: %w", err)
+	}
+
+	return s, nil
 }
