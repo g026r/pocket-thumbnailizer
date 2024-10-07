@@ -38,7 +38,7 @@ func ProcessGames(args Args, games []model.Game) (int, error) {
 		img := args.ImagePath
 		// If we're in multifile mode we need to build the file from the game name
 		if len(args.Datafile) != 0 {
-			//libretro uses '_' instead of '&' in file names
+			// libretro uses '_' instead of '&' in file names
 			img, err = findFile(img, strings.ReplaceAll(g.Name, "&", "_"))
 			if errors.Is(err, os.ErrNotExist) {
 				if args.Verbose {
@@ -100,19 +100,19 @@ func writeFile(hash, src string, outDir string, upscale bool) error {
 	if rotated.Rect.Max.X > maxImgSize { // Only resize non box art if the image is too big.
 		rotated = imaging.Resize(rotated, maxImgSize, 0, imaging.Lanczos)
 	} else if upscale {
-		// We scale here. Should I use a different scaling algo?
+		// We upscale here. Should I use a different scaling algo?
 		rotated = imaging.Resize(rotated, maxImgSize, 0, imaging.Lanczos)
 	}
 	width := rotated.Rect.Max.X
 	height := rotated.Rect.Max.Y
 
-	// Why use BGRA, Analogue? Why?
-	bgra := make([]byte, len(rotated.Pix))
-	for i := 0; i < len(rotated.Pix); i = i + 4 {
-		bgra[i] = rotated.Pix[i+2]
-		bgra[i+1] = rotated.Pix[i+1]
-		bgra[i+2] = rotated.Pix[i]
-		bgra[i+3] = rotated.Pix[i+3]
+	bgra := make([]byte, 0)
+	// Since it's one row at a time, outer loop should be Y & inner loop should be X
+	for y := rotated.Rect.Min.Y; y < rotated.Rect.Max.Y; y++ {
+		for x := rotated.Bounds().Min.X; x < rotated.Bounds().Max.X; x++ {
+			c := rotated.NRGBAAt(x, y)
+			bgra = append(bgra, c.B, c.G, c.R, c.A)
+		}
 	}
 
 	err = MakeDir(outDir) // This occurs here & not earlier why again? I forget.
