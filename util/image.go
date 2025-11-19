@@ -48,7 +48,7 @@ func ProcessGames(args Args, games []model.Game) (int, error) {
 			}
 		}
 
-		err = writeFile(g.ROM.CRC32, img, args.OutPath, args.Upscale)
+		err = writeFile(g.ROM.CRC32, img, args.OutPath, args.Resize)
 		if err != nil {
 			return processed, fmt.Errorf("util.WriteFile error: %w", err)
 		}
@@ -81,7 +81,7 @@ func findFile(path, name string) (string, error) {
 // upscale will cause it to stretch images less than maxImgSize in height to maxImgSize
 //
 // See https://www.analogue.co/developer/docs/library#image-format for details on the image format
-func writeFile(hash, src string, outDir string, upscale bool) error {
+func writeFile(hash, src string, outDir string, resize Resize) error {
 	img, err := getImg(src)
 	if err != nil {
 		// A bunch of libretro-thumbnail images have invalid checksums & are simply un-openable via Go's strict image loader
@@ -97,9 +97,9 @@ func writeFile(hash, src string, outDir string, upscale bool) error {
 	// I'll worry about that if ever I get a Duo, I guess.
 	rotated := imaging.Rotate90(img) // return type: image.NRGBA
 
-	if rotated.Rect.Max.X > maxImgSize { // Only resize non box art if the image is too big.
+	if resize == Default && rotated.Rect.Max.X > maxImgSize { // Only resize non box art if the image is too big.
 		rotated = imaging.Resize(rotated, maxImgSize, 0, imaging.Lanczos)
-	} else if upscale {
+	} else if resize == Upscale {
 		// We upscale here. Should I use a different scaling algo?
 		rotated = imaging.Resize(rotated, maxImgSize, 0, imaging.Lanczos)
 	}

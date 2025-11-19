@@ -24,7 +24,11 @@ For single image mode, the following options are used:
 * `--in` The image to process. Can handle jpg, png, and gif are supported.
 * `--out` The directory to output the file to.
 
-You can also pass it `--upscale` or `--verbose` in both modes.
+By default images greater than 175 pixels in height will be resized down, while images less than that are untouched.
+You can modify this behaviour with either `--no-resize` or `--upscale`. These options are mutually exclusive.
 
-* `--upscale` will resize any image below 175 pixels in height up to 175 pixels. (Images will always be resized down to 175 pixels in height if they're larger to avoid cropping.)
+* `--no-resize` will prevent any resizing from occurring on images. Not recommended, as it results in large files.
+* `--upscale` will, in addition to resizing large images down to 175px, resize any image below 175px in height up to 175px.
+
+And one last flag is available:
 * `--verbose` prints out a few extra logging messages. If you're using the multi-file mode & not seeing the image you expect generating, you may wish to try this flag.
