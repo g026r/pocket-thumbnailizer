@@ -12,6 +12,14 @@ import (
 
 var ErrInvalidArguments = errors.New("invalid arguments")
 
+type Resize uint8
+
+const (
+	Default Resize = iota
+	NoResize
+	Upscale
+)
+
 // Args contains all the recognized commandline arguments
 type Args struct {
 	// Datafile is the dat-o-matic datafile for multi-game processing mode. Mutually exclusive with CRC.
@@ -22,8 +30,12 @@ type Args struct {
 	ImagePath string
 	// OutPath will be created during processing. Will default to the current working dir otherwise.
 	OutPath string
-	// Upscale specifies whether to resize images less than MaxImgSize pixels.
-	Upscale bool
+	// upscale specifies whether to resize images less than MaxImgSize pixels.
+	upscale bool
+	// noResize prevents resizing of images. Cannot be used with Upscale
+	noResize bool
+	// Resize determines what resizing algo to use
+	Resize
 	// Verbose prints a few extra logging messages.
 	Verbose bool
 	// Duo specifies whether to output in Duo-format. Doesn't currently work
@@ -37,8 +49,11 @@ type Args struct {
 func ParseArgs() (Args, error) {
 	args := Args{}
 	flag.Usage = printUsage
-	flag.BoolVar(&args.Upscale, "upscale", false, "Resizes images less than 170 pixels high")
-	flag.BoolVar(&args.Upscale, "u", false, "Resizes images less than 170 pixels high")
+	flag.BoolVar(&args.upscale, "upscale", false, "Resizes all images to 170px in height, upscaling if necessary")
+	flag.BoolVar(&args.upscale, "u", false, "Resizes all images to 170px in height, upscaling if necessary")
+
+	flag.BoolVar(&args.noResize, "no-resize", false, "Does not resize images. Cannot be used with --upscale")
+	flag.BoolVar(&args.noResize, "x", false, "Does not resize images. Cannot be used with --upscale")
 
 	flag.BoolVar(&args.Verbose, "verbose", false, "Turns on verbose logging")
 	flag.BoolVar(&args.Verbose, "v", false, "Turns on verbose logging")
@@ -87,6 +102,10 @@ func verifyArgs(args Args) (Args, error) {
 	}
 	if len(args.OutPath) == 0 {
 		fmt.Println("ERROR: --out must be specified")
+		return args, ErrInvalidArguments
+	}
+	if args.noResize && args.upscale {
+		fmt.Println("ERROR: --no-resize and --upscale cannot be used together")
 		return args, ErrInvalidArguments
 	}
 
@@ -139,6 +158,14 @@ func verifyArgs(args Args) (Args, error) {
 		}
 	}
 
+	if args.noResize {
+		args.Resize = NoResize
+	} else if args.upscale {
+		args.Resize = Upscale
+	} else {
+		args.Resize = Default
+	}
+
 	return args, nil
 }
 
@@ -152,6 +179,7 @@ Usage of thumbnailizer:
 -i, --in       Path to image file (for crc mode) or image directory (for datafile mode)
 -o, --out      Output directory (defaults to current directory if unspecified)
 -u, --upscale  Resizes images less than 170 pixels high
+-x, --no-resize    Outputs images as is. Cannot be used with --upscale
 -v, --verbose  Turns on verbose logging`)
 }
 
