@@ -49,8 +49,8 @@ type Args struct {
 func ParseArgs() (Args, error) {
 	args := Args{}
 	flag.Usage = printUsage
-	flag.BoolVar(&args.upscale, "upscale", false, "Resizes all images to 170px in height, upscaling if necessary")
-	flag.BoolVar(&args.upscale, "u", false, "Resizes all images to 170px in height, upscaling if necessary")
+	flag.BoolVar(&args.upscale, "upscale", false, fmt.Sprintf("Resizes all images to %dpx in height, upscaling if necessary", maxImgSize))
+	flag.BoolVar(&args.upscale, "u", false, fmt.Sprintf("Resizes all images to %dpx in height, upscaling if necessary", maxImgSize))
 
 	flag.BoolVar(&args.noResize, "no-resize", false, "Does not resize images. Cannot be used with --upscale")
 	flag.BoolVar(&args.noResize, "x", false, "Does not resize images. Cannot be used with --upscale")
@@ -171,16 +171,16 @@ func verifyArgs(args Args) (Args, error) {
 
 // printUsage exists to override the default flag function, which is ugly as sin
 func printUsage() {
-	fmt.Println(`
+	fmt.Println(fmt.Sprintf(`
 Usage of thumbnailizer:
--c, --crc      CRC32 of game for single image processing mode
--d, --datafile Path to no-intro dat-o-matic datafile for multi image processing mode
--h, --help     Prints this message
--i, --in       Path to image file (for crc mode) or image directory (for datafile mode)
--o, --out      Output directory (defaults to current directory if unspecified)
--u, --upscale  Resizes images less than 170 pixels high
--x, --no-resize    Outputs images as is. Cannot be used with --upscale
--v, --verbose  Turns on verbose logging`)
+-c, --crc        CRC32 of game for single image processing mode
+-d, --datafile   Path to no-intro dat-o-matic datafile for multi image processing mode
+-h, --help       Prints this message
+-i, --in         Path to image file (for crc mode) or image directory (for datafile mode)
+-o, --out        Output directory (defaults to current directory if unspecified)
+-u, --upscale    Resizes images less than %d pixels high to that height
+-x, --no-resize  Outputs images as is. Cannot be used with --upscale
+-v, --verbose    Turns on verbose logging`, maxImgSize))
 }
 
 // hexStringCleanAndVerify is a simple function to verify that what we have been provided as a crc 32 hash is a valid
