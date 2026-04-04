@@ -1,2 +1,7 @@
 /vendor
 /.idea
+/build
+/build.sh
+*.tar
+*.zip
+*.gz
