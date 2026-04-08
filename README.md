@@ -21,7 +21,7 @@ For multi-image mode, the following options are used:
 
 For single image mode, the following options are used:
 * `--crc` The crc to use for the filename.
-* `--in` The image to process. Can handle jpg, png, and gif are supported.
+* `--in` The image to process. See above for list of accepted types.
 * `--out` The directory to output the file to.
 
 By default images greater than 175 pixels in height will be resized down, while images less than that are untouched.
