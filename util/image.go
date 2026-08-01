@@ -48,6 +48,12 @@ func ProcessGames(args Args, games []model.Game) (int, error) {
 			}
 		}
 
+		if len(g.ROM) == 0 {
+			if args.Verbose {
+				fmt.Printf("%s: does not have a rom element. Skipping.\n", g.Name)
+			}
+			continue
+		}
 		err = writeFile(g.ROM[0].CRC32, img, args.OutPath, args.Resize)
 		if err != nil {
 			return processed, fmt.Errorf("util.WriteFile error: %w", err)
