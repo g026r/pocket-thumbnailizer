@@ -48,7 +48,7 @@ func ProcessGames(args Args, games []model.Game) (int, error) {
 			}
 		}
 
-		err = writeFile(g.ROM.CRC32, img, args.OutPath, args.Resize)
+		err = writeFile(g.ROM[0].CRC32, img, args.OutPath, args.Resize)
 		if err != nil {
 			return processed, fmt.Errorf("util.WriteFile error: %w", err)
 		}

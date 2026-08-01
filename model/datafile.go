@@ -11,7 +11,7 @@ type Datafile struct {
 type Game struct {
 	XMLName xml.Name `xml:"game"`
 	Name    string   `xml:"name,attr"`
-	ROM     Rom      `xml:"rom"`
+	ROM     []Rom    `xml:"rom"`
 }
 
 type Rom struct {
