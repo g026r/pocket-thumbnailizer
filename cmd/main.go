@@ -48,9 +48,9 @@ func main() {
 		datafile = model.Datafile{
 			Games: []model.Game{{
 				Name: name,
-				ROM: model.Rom{
+				ROM: []model.Rom{{
 					CRC32: args.CRC,
-				},
+				}},
 			}},
 		}
 	}
